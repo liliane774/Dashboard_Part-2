@@ -1,0 +1,10 @@
+streamlit==1.20.0
+pandas
+numpy
+matplotlib==3.7.1
+plotly==5.13.0
+keplergl
+streamlit-keplergl
+numerize==0.12
+pillow==9.4.0
+

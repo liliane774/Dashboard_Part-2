@@ -505,18 +505,15 @@ elif page == "Kepler.gl Map":
     # start_lat/start_lng (and/or end_lat/end_lng)
     map_1.add_data(data=df, name="Citi Bike Trips")
 
-    # Make it large
-    keplergl_static(map_1, height=650)
+ # Make it large
+keplergl_static(map_1, height=650)
 
-    st.markdown(
-        """
-        **Interpretation**
-
-        The Kepler.gl map provides a spatial view of Citi Bike activity across New York City.
-        Dense clusters indicate high-demand areas (often near transit hubs and commercial/residential centers).
-        These spatial patterns can guide rebalancing, dock capacity planning, and potential station expansion.
-        """
-    )
+with st.expander("Interpretation"):
+    st.markdown("""
+    The Kepler.gl map provides a spatial view of Citi Bike activity across New York City.
+    Dense clusters indicate high-demand areas, often near transit hubs and commercial centers.
+    These insights can guide rebalancing and station expansion decisions.
+    """)
 
 
 #---------------------------------------------------

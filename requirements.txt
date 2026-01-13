@@ -4,9 +4,7 @@ numpy==1.26.4
 matplotlib==3.7.1
 plotly==5.13.0
 streamlit-keplergl
-keplergl
 numerize==0.12
 pillow==9.4.0
-pyarrow==14.0.2
-
+keplergl
 

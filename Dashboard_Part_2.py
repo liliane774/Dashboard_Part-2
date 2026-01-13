@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import io
+import matplotlib.pyplot as plt
 
 # --------------------------------------------------
 # App configuration
@@ -25,6 +27,27 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
+# --------------------------------------------------
+# Helper: SAFE Matplotlib display (full-width)
+# --------------------------------------------------
+def st_mpl(fig):
+    """
+    Streamlit-compatible Matplotlib display.
+    Works even if st.image() does NOT support use_container_width.
+    """
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", bbox_inches="tight", dpi=150)
+    buf.seek(0)
+
+    # Older Streamlit: no use_container_width argument
+    try:
+        st.image(buf, use_container_width=True)   # newer Streamlit
+    except TypeError:
+        st.image(buf)                             # older Streamlit fallback
+
+    plt.close(fig)
+
 
 # --------------------------------------------------
 # Load reduced sample dataset
@@ -157,15 +180,13 @@ elif page == "Trips & Time Trends":
     col2.metric("Avg trips / day", f"{daily['trip_count'].mean():,.0f}" if len(daily) else "0")
     col3.metric("Peak hour", f"{int(hourly.idxmax()):02d}:00" if hourly.sum() else "N/A")
 
-    import matplotlib.pyplot as plt
-
     st.subheader("Daily Trip Volume")
     fig1, ax1 = plt.subplots(figsize=(10, 4))
     ax1.plot(daily["date"], daily["trip_count"])
     ax1.set_xlabel("Date")
     ax1.set_ylabel("Trips")
     fig1.autofmt_xdate()
-    st.pyplot(fig1, use_container_width=True)
+    st_mpl(fig1)
 
     st.subheader("Trips by Month")
     month_names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
@@ -173,14 +194,14 @@ elif page == "Trips & Time Trends":
     ax2.bar([month_names[m-1] for m in monthly.index], monthly.values)
     ax2.set_ylabel("Trips")
     ax2.set_xlabel("Month")
-    st.pyplot(fig2, use_container_width=True)
+    st_mpl(fig2)
 
     st.subheader("Trips by Hour of Day")
     fig3, ax3 = plt.subplots(figsize=(10, 4))
     ax3.bar(hourly.index, hourly.values)
     ax3.set_xlabel("Hour (0–23)")
     ax3.set_ylabel("Trips")
-    st.pyplot(fig3, use_container_width=True)
+    st_mpl(fig3)
 
     with st.expander("Interpretation"):
         st.markdown(
@@ -231,8 +252,6 @@ elif page == "Dual-Axis: Trips vs Temperature":
             avg_temp=("avg_temp", "mean")
         ).reset_index().sort_values("date")
 
-    import matplotlib.pyplot as plt
-
     fig, ax1 = plt.subplots(figsize=(10, 5))
     ax1.plot(daily_summary["date"], daily_summary["trip_count"])
     ax1.set_xlabel("Date")
@@ -243,7 +262,7 @@ elif page == "Dual-Axis: Trips vs Temperature":
     ax2.set_ylabel("Avg Temperature")
 
     fig.autofmt_xdate()
-    st.pyplot(fig, use_container_width=True)
+    st_mpl(fig)
 
     with st.expander("Interpretation"):
         st.markdown(
@@ -320,8 +339,6 @@ elif page == "Weather Impact":
         horizontal=True
     )
 
-    import matplotlib.pyplot as plt
-
     st.subheader("Relationship Between Weather and Trip Volume")
     fig, ax = plt.subplots(figsize=(8, 5))
     if weather_var == "Average Temperature":
@@ -332,7 +349,7 @@ elif page == "Weather Impact":
         ax.scatter(daily_weather["prcp"], daily_weather["trip_count"])
         ax.set_xlabel("Precipitation (PRCP)")
         ax.set_ylabel("Daily Trips")
-    st.pyplot(fig, use_container_width=True)
+    st_mpl(fig)
 
     st.subheader("Weather and Trips Over Time")
     fig2, ax1 = plt.subplots(figsize=(10, 4))
@@ -348,7 +365,7 @@ elif page == "Weather Impact":
         ax2.plot(daily_weather["date"], daily_weather["prcp"], linestyle="--")
         ax2.set_ylabel("Precipitation")
     fig2.autofmt_xdate()
-    st.pyplot(fig2, use_container_width=True)
+    st_mpl(fig2)
 
     with st.expander("Interpretation"):
         st.markdown(
@@ -393,25 +410,23 @@ elif page == "Stations & Routes":
     col2.metric("Unique start stations", f"{df_sr['start_station_name'].nunique():,}")
     col3.metric("Unique routes", f"{df_sr['route'].nunique():,}")
 
-    import matplotlib.pyplot as plt
-
     st.subheader("Top Starting Stations")
     fig1, ax1 = plt.subplots(figsize=(10, 6))
     ax1.barh(start_counts.index, start_counts.values)
     ax1.set_xlabel("Trips Started")
-    st.pyplot(fig1, use_container_width=True)
+    st_mpl(fig1)
 
     st.subheader("Top Ending Stations")
     fig2, ax2 = plt.subplots(figsize=(10, 6))
     ax2.barh(end_counts.index, end_counts.values)
     ax2.set_xlabel("Trips Ended")
-    st.pyplot(fig2, use_container_width=True)
+    st_mpl(fig2)
 
     st.subheader("Most Frequent Routes (Start → End)")
     fig3, ax3 = plt.subplots(figsize=(10, 6))
     ax3.barh(route_counts.index, route_counts.values)
     ax3.set_xlabel("Trips")
-    st.pyplot(fig3, use_container_width=True)
+    st_mpl(fig3)
 
     with st.expander("Interpretation"):
         st.markdown(
@@ -465,6 +480,10 @@ elif page == "Popular Stations":
     st.title("Most Popular Starting Stations")
     st.write("Stations with the highest number of trip starts in the dataset.")
 
+    if "start_station_name" not in df.columns:
+        st.error("Missing required column: start_station_name")
+        st.stop()
+
     top_n = st.sidebar.slider("Number of stations to display", 5, 30, 10)
 
     top_stations = (
@@ -475,13 +494,12 @@ elif page == "Popular Stations":
         .sort_values(ascending=True)
     )
 
-    import matplotlib.pyplot as plt
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.barh(top_stations.index, top_stations.values)
     ax.set_xlabel("Number of Trips Started")
     ax.set_ylabel("Starting Station")
     ax.set_title(f"Top {top_n} Starting Stations")
-    st.pyplot(fig, use_container_width=True)
+    st_mpl(fig)
 
     with st.expander("Interpretation"):
         st.markdown(
@@ -528,18 +546,17 @@ elif page == "Station Balance (Supply Problem)":
     col2.metric("Worst net loss", f"{losing['net_balance'].min():,.0f}")
     col3.metric("Worst net gain", f"{gaining['net_balance'].max():,.0f}")
 
-    import matplotlib.pyplot as plt
     st.subheader("Stations Losing Bikes (Need Rebalancing IN)")
     fig1, ax1 = plt.subplots(figsize=(10, 5))
     ax1.barh(losing["station"], losing["net_balance"])
     ax1.set_xlabel("Net Balance (Starts − Ends)")
-    st.pyplot(fig1, use_container_width=True)
+    st_mpl(fig1)
 
     st.subheader("Stations Gaining Bikes (Need Rebalancing OUT)")
     fig2, ax2 = plt.subplots(figsize=(10, 5))
     ax2.barh(gaining["station"], gaining["net_balance"])
     ax2.set_xlabel("Net Balance (Starts − Ends)")
-    st.pyplot(fig2, use_container_width=True)
+    st_mpl(fig2)
 
     with st.expander("Interpretation"):
         st.markdown(
